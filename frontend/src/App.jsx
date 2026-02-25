@@ -5,9 +5,9 @@ import {
   LogOut, User as UserIcon, Zap, Search, FileDown, 
   ChevronRight, CheckCircle2, ListFilter, Users, UserPlus
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import Login from './pages/Login';
-
-// Import koneksi API Backend
 import api from './services/api'; 
 
 // --- KOMPONEN NAVIGASI SIDEBAR (Light Theme) ---
@@ -54,7 +54,6 @@ const Layout = ({ children, title }) => {
           <NavItem to="/transaksi-masuk" icon={ArrowDownLeft} label="Barang Masuk" />
           <NavItem to="/transaksi-keluar" icon={ArrowUpRight} label="Proses Pengeluaran" />
 
-          {/* MENU KHUSUS ADMIN UNTUK TAMBAH USER */}
           <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-8 mt-8 mb-2">Pengaturan</div>
           <NavItem to="/users" icon={Users} label="Manajemen User" />
         </nav>
@@ -152,18 +151,18 @@ const Dashboard = ({ materials, stats }) => {
 
 // --- HALAMAN TRANSAKSI MASUK ---
 const TransaksiMasuk = ({ materials, onAdd }) => {
-  const [form, setForm] = useState({ nama: '', merk: '', tgl: '', jml: '' });
+  const [form, setForm] = useState({ nama: '', merk: '', tipe: '', tgl: '', jml: '', satuan: 'Buah' }); // Default 'Buah'
   const datasetBarang = [...new Set(materials.map(m => m.nama).filter(Boolean))];
   const datasetMerk = [...new Set(materials.map(m => m.merk).filter(Boolean))];
+  const datasetTipe = [...new Set(materials.map(m => m.tipe).filter(Boolean))];
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onAdd({ ...form, jml: parseInt(form.jml) });
-    setForm({ nama: '', merk: '', tgl: '', jml: '' });
+    setForm({ nama: '', merk: '', tipe: '', tgl: '', jml: '', satuan: 'Buah' });
   };
 
   return (
-    // Penambahan Flexbox untuk meletakkan form di tengah layar
     <div className="flex items-center justify-center min-h-[75vh]">
       <div className="w-full max-w-3xl bg-white p-10 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
         <h3 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-4">
@@ -178,18 +177,34 @@ const TransaksiMasuk = ({ materials, onAdd }) => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Merk Material</label>
-              <input list="list-merk" value={form.merk} placeholder="Merk..." required className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-700" onChange={e => setForm({...form, merk: e.target.value})} />
+              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Merk</label>
+              <input list="list-merk" value={form.merk} placeholder="Contoh: Schneider" required className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-700" onChange={e => setForm({...form, merk: e.target.value})} />
               <datalist id="list-merk">{datasetMerk.map((m, idx) => <option key={idx} value={m} />)}</datalist>
             </div>
+            <div>
+              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Tipe</label>
+              <input list="list-tipe" value={form.tipe} placeholder="Contoh: 100kVA" className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-700" onChange={e => setForm({...form, tipe: e.target.value})} />
+              <datalist id="list-tipe">{datasetTipe.map((t, idx) => <option key={idx} value={t} />)}</datalist>
+            </div>
+          </div>
+          {/* Baris Baru: Jumlah, Satuan, Tanggal */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Jumlah Unit</label>
               <input type="number" value={form.jml} required min="1" className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-700" onChange={e => setForm({...form, jml: e.target.value})} />
             </div>
-          </div>
-          <div>
-            <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Tanggal Diterima</label>
-            <input type="date" value={form.tgl} required className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-500" onChange={e => setForm({...form, tgl: e.target.value})} />
+            <div>
+              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Satuan</label>
+              <select value={form.satuan} required className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-700 cursor-pointer" onChange={e => setForm({...form, satuan: e.target.value})}>
+                <option value="Buah">Buah</option>
+                <option value="Set">Set</option>
+                <option value="Pack">Pack</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Tanggal Diterima</label>
+              <input type="date" value={form.tgl} required className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-500" onChange={e => setForm({...form, tgl: e.target.value})} />
+            </div>
           </div>
           <button className="w-full py-5 bg-[#00AFF0] text-white rounded-2xl font-black text-lg shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:-translate-y-1 active:scale-95 transition-all mt-4">Simpan Transaksi Masuk</button>
         </form>
@@ -200,53 +215,76 @@ const TransaksiMasuk = ({ materials, onAdd }) => {
 
 // --- HALAMAN TRANSAKSI KELUAR ---
 const TransaksiKeluar = ({ materials, onRemove }) => {
-  const [form, setForm] = useState({ nama: '', merk: '', tgl: '', jml: '', penerima: '' });
+  const [form, setForm] = useState({ nama: '', merk: '', tipe: '', tgl: '', jml: '', penerima: '', ulp: '', satuan: 'Buah' }); // Default 'Buah'
   const datasetBarang = [...new Set(materials.map(m => m.nama).filter(Boolean))];
   const datasetMerk = [...new Set(materials.map(m => m.merk).filter(Boolean))];
+  const datasetTipe = [...new Set(materials.map(m => m.tipe).filter(Boolean))];
+
+  const daftarULP = ["ULP Parepare", "ULP Mattirotasi", "ULP Barru", "ULP Pangkep", "ULP Sidrap"];
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onRemove({ ...form, jml: parseInt(form.jml) });
-    setForm({ nama: '', merk: '', tgl: '', jml: '', penerima: '' });
+    setForm({ nama: '', merk: '', tipe: '', tgl: '', jml: '', penerima: '', ulp: '', satuan: 'Buah' });
   };
 
   return (
-    // Penambahan Flexbox untuk meletakkan form di tengah layar
-    <div className="flex items-center justify-center min-h-[75vh]">
+    <div className="flex items-center justify-center min-h-[75vh] py-8">
       <div className="w-full max-w-3xl bg-white p-10 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
         <h3 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-4">
           <div className="p-3 bg-blue-50 text-[#00AFF0] rounded-2xl"><ArrowUpRight size={24} /></div>
           Form Proses Pengeluaran
         </h3>
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Nama Barang</label>
+            <input list="list-barang-out" value={form.nama} required className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-700" onChange={e => setForm({...form, nama: e.target.value})} />
+            <datalist id="list-barang-out">{datasetBarang.map((b, idx) => <option key={idx} value={b} />)}</datalist>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Nama Barang</label>
-              <input list="list-barang-out" value={form.nama} required className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-700" onChange={e => setForm({...form, nama: e.target.value})} />
-              <datalist id="list-barang-out">{datasetBarang.map((b, idx) => <option key={idx} value={b} />)}</datalist>
-            </div>
-            <div>
-              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Merk Material</label>
+              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Merk</label>
               <input list="list-merk-out" value={form.merk} required className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-700" onChange={e => setForm({...form, merk: e.target.value})} />
               <datalist id="list-merk-out">{datasetMerk.map((m, idx) => <option key={idx} value={m} />)}</datalist>
+            </div>
+            <div>
+              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Tipe</label>
+              <input list="list-tipe-out" value={form.tipe} className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-700" onChange={e => setForm({...form, tipe: e.target.value})} />
+              <datalist id="list-tipe-out">{datasetTipe.map((t, idx) => <option key={idx} value={t} />)}</datalist>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Nama Penerima</label>
-              <input type="text" value={form.penerima} placeholder="Vendor / Staff ULP" required className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-700" onChange={e => setForm({...form, penerima: e.target.value})} />
+              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Tujuan ULP</label>
+              <select value={form.ulp} required className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-700 cursor-pointer" onChange={e => setForm({...form, ulp: e.target.value})}>
+                <option value="" disabled>Pilih ULP...</option>
+                {daftarULP.map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
             </div>
+            <div>
+              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Nama Penerima</label>
+              <input type="text" value={form.penerima} placeholder="Nama Petugas..." required className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-700" onChange={e => setForm({...form, penerima: e.target.value})} />
+            </div>
+          </div>
+          {/* Baris Baru: Jumlah, Satuan, Tanggal */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Jumlah Keluar</label>
               <input type="number" value={form.jml} required min="1" className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-700" onChange={e => setForm({...form, jml: e.target.value})} />
             </div>
+            <div>
+              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Satuan</label>
+              <select value={form.satuan} required className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-700 cursor-pointer" onChange={e => setForm({...form, satuan: e.target.value})}>
+                <option value="Buah">Buah</option>
+                <option value="Set">Set</option>
+                <option value="Pack">Pack</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Tanggal Keluar</label>
+              <input type="date" value={form.tgl} required className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-500" onChange={e => setForm({...form, tgl: e.target.value})} />
+            </div>
           </div>
-          <div>
-            <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">Tanggal Keluar</label>
-            <input type="date" value={form.tgl} required className="w-full p-4 bg-[#F8FAFC] border-2 border-transparent rounded-2xl outline-none focus:border-[#00AFF0] focus:bg-white transition-all font-semibold text-slate-500" onChange={e => setForm({...form, tgl: e.target.value})} />
-          </div>
-          
-          {/* Perubahan Warna Tombol agar sama dengan Transaksi Masuk */}
           <button className="w-full py-5 bg-[#00AFF0] text-white rounded-2xl font-black text-lg shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:-translate-y-1 active:scale-95 transition-all mt-4">Proses Pengeluaran</button>
         </form>
       </div>
@@ -254,16 +292,82 @@ const TransaksiKeluar = ({ materials, onRemove }) => {
   );
 };
 
-// --- HALAMAN DATA MATERIAL & REPORT ---
+// --- HALAMAN DATA MATERIAL & REPORT (DENGAN GENERATE PDF) ---
 const DataMaterial = ({ materials }) => {
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState("");
+  const user = JSON.parse(localStorage.getItem('user')) || { name: "Admin Gudang" };
 
   const toggleSelect = (id) => {
     setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
   const filtered = materials.filter(i => i.nama && i.nama.toLowerCase().includes(search.toLowerCase()));
+
+  // Logika Pembuatan Berita Acara Serah Terima PDF
+  const handleDownloadPDF = () => {
+    if (selected.length === 0) return;
+    
+    const doc = new jsPDF();
+    const itemsToPrint = materials.filter(m => selected.includes(m.id));
+    
+    const namaPenerima = itemsToPrint[0]?.diterima || "(Nama Penerima)";
+    const namaUlp = itemsToPrint[0]?.ulp || "ULP ....................";
+    const dateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Header BAST
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text("BERITA ACARA SERAH TERIMA BARANG", 105, 20, { align: "center" });
+    
+    // Paragraf Pembuka
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    const textLines = doc.splitTextToSize(`Pada hari ini ${dateStr}. Telah dilaksanakan serah terima barang sebagai berikut :`, 180);
+    doc.text(textLines, 14, 35);
+
+    // MENGAMBIL SATUAN DARI DATA (Bukan lagi hardcode "Unit")
+    const tableData = itemsToPrint.map((item, index) => [
+      index + 1,
+      item.nama || "-",
+      item.merk || "-",
+      item.tipe || "-",
+      item.stok || item.jumlahKeluar || 0,
+      item.satuan || "Buah" // <--- Satuan diambil otomatis dari data
+    ]);
+
+    // Membuat Tabel PDF
+    doc.autoTable({
+      startY: 45,
+      head: [['No', 'Barang', 'Merk', 'Tipe', 'Jumlah', 'Satuan']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [0, 175, 240] } // Biru PLN
+    });
+
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Paragraf Penutup
+    doc.text("Material tersebut telah diterima dalam keadaan baik dan lengkap. Selanjutnya dapat dipergunakan sebagai sarana pelaksanaan P2TL.", 14, finalY, { maxWidth: 180 });
+
+    // Area Tanda Tangan
+    const signY = finalY + 25;
+    
+    doc.setFont("helvetica", "bold");
+    doc.text("PIHAK PENERIMA", 40, signY, { align: "center" });
+    doc.text(namaUlp.toUpperCase(), 40, signY + 5, { align: "center" });
+    
+    doc.text(namaPenerima, 40, signY + 35, { align: "center" });
+    doc.line(20, signY + 36, 60, signY + 36);
+
+    doc.text("PIHAK PEMBERI", 170, signY, { align: "center" });
+    doc.text("UP3 PAREPARE", 170, signY + 5, { align: "center" });
+    
+    doc.text(user.name.toUpperCase(), 170, signY + 35, { align: "center" });
+    doc.line(150, signY + 36, 190, signY + 36);
+
+    doc.save(`BAST_Barang_${new Date().getTime()}.pdf`);
+  };
 
   return (
     <div className="space-y-6">
@@ -272,8 +376,11 @@ const DataMaterial = ({ materials }) => {
           <Search className="absolute left-5 top-4 text-slate-300" size={20} />
           <input type="text" placeholder="Pencarian material..." className="w-full pl-14 pr-4 py-4 bg-[#F8FAFC] border border-transparent rounded-2xl focus:border-[#00AFF0] focus:bg-white transition-all outline-none text-sm font-semibold text-slate-700" onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <button className={`flex items-center gap-2 px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95 ${selected.length > 0 ? 'bg-[#00AFF0] text-white hover:shadow-blue-500/40 hover:-translate-y-1' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
-          <FileDown size={18} /> Download Laporan ({selected.length})
+        <button 
+          onClick={handleDownloadPDF}
+          className={`flex items-center gap-2 px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95 ${selected.length > 0 ? 'bg-[#00AFF0] text-white hover:shadow-blue-500/40 hover:-translate-y-1' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+        >
+          <FileDown size={18} /> Download Dokumen BAST ({selected.length})
         </button>
       </div>
 
@@ -284,8 +391,8 @@ const DataMaterial = ({ materials }) => {
               <th className="px-6 py-6 text-center w-16"><ListFilter size={16} className="mx-auto" /></th>
               <th className="px-6 py-6 text-slate-600">Nama Barang</th>
               <th className="px-6 py-6 text-slate-600">Merk</th>
-              <th className="px-6 py-6 text-slate-600">Tgl Masuk</th>
-              <th className="px-6 py-6 text-slate-600">Tgl Keluar</th>
+              <th className="px-6 py-6 text-slate-600">Tipe</th>
+              <th className="px-6 py-6 text-slate-600">Satuan</th>
               <th className="px-6 py-6 text-slate-600">Penerima</th>
             </tr>
           </thead>
@@ -299,10 +406,13 @@ const DataMaterial = ({ materials }) => {
                     <input type="checkbox" readOnly checked={selected.includes(item.id)} className="w-5 h-5 rounded-lg border-slate-300 text-[#00AFF0] focus:ring-[#00AFF0]" />
                   </td>
                   <td className="px-6 py-6 font-bold text-slate-800">{item.nama}</td>
-                  <td className="px-6 py-6 text-slate-500 italic">{item.merk}</td>
-                  <td className="px-6 py-6 text-slate-500">{item.tglMasuk || '-'}</td>
-                  <td className="px-6 py-6 text-slate-500">{item.tglKeluar || '-'}</td>
-                  <td className="px-6 py-6 text-slate-800 font-bold">{item.diterima || '-'}</td>
+                  <td className="px-6 py-6 text-slate-500">{item.merk || '-'}</td>
+                  <td className="px-6 py-6 text-slate-500 italic">{item.tipe || '-'}</td>
+                  <td className="px-6 py-6 text-slate-500 font-bold">{item.satuan || 'Buah'}</td>
+                  <td className="px-6 py-6 text-slate-800">
+                    <span className="font-bold">{item.ulp || '-'}</span> <br/>
+                    <span className="text-xs text-slate-400 font-normal">{item.diterima || '-'}</span>
+                  </td>
                 </tr>
               ))
             )}
@@ -334,7 +444,6 @@ const ManajemenUser = () => {
   };
 
   return (
-    // Penambahan Flexbox untuk meletakkan form di tengah layar
     <div className="flex items-center justify-center min-h-[75vh]">
       <div className="w-full max-w-2xl bg-white p-10 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
         <h3 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-4">
@@ -385,46 +494,30 @@ function App() {
       const countMasuk = dataDariDatabase.reduce((acc, curr) => acc + (curr.stok || 0), 0);
       setStats({ masuk: countMasuk, keluar: 0 }); 
     } catch (error) {
-      console.error("Gagal terhubung ke Database MySQL:", error);
+      console.error("Gagal mengambil data database", error);
     }
   };
 
-  useEffect(() => {
-    fetchDataset();
-  }, []);
+  useEffect(() => { fetchDataset(); }, []);
 
   const addStock = async (data) => {
     try {
       await api.post('/barang', {
-        nama: data.nama,
-        merk: data.merk,
-        stok: data.jml,
-        tglMasuk: data.tgl,
-        diterima: 'Gudang Utama'
+        nama: data.nama, merk: data.merk, tipe: data.tipe, satuan: data.satuan, stok: data.jml, tglMasuk: data.tgl, diterima: 'Gudang Utama'
       });
-      alert("Berhasil menyimpan ke Database MySQL!");
+      alert("Berhasil menyimpan ke Database!");
       fetchDataset(); 
-    } catch (error) {
-      console.error(error);
-      alert("Gagal menyimpan ke Database.");
-    }
+    } catch (error) { alert("Gagal menyimpan ke Database."); }
   };
 
   const removeStock = async (data) => {
     try {
       await api.post('/barang-keluar', {
-        nama: data.nama,
-        merk: data.merk,
-        jumlahKeluar: data.jml,
-        tglKeluar: data.tgl,
-        penerima: data.penerima
+        nama: data.nama, merk: data.merk, tipe: data.tipe, satuan: data.satuan, jumlahKeluar: data.jml, tglKeluar: data.tgl, penerima: data.penerima, ulp: data.ulp
       });
       alert("Pengeluaran barang berhasil diproses ke Database!");
       fetchDataset(); 
-    } catch (error) {
-      console.error(error);
-      alert("Gagal memproses barang keluar. Pastikan stok cukup.");
-    }
+    } catch (error) { alert("Gagal memproses barang keluar."); }
   };
 
   const token = localStorage.getItem('token');
