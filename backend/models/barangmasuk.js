@@ -10,8 +10,8 @@ module.exports = (sequelize, DataTypes) => {
   BarangMasuk.init({
     nama: DataTypes.STRING,
     merk: DataTypes.STRING,
-    tipe: DataTypes.STRING,       // Kolom Baru
-    satuan: DataTypes.STRING,     // Kolom Baru
+    tipe: DataTypes.STRING,       
+    satuan: DataTypes.STRING,     
     jumlah: DataTypes.INTEGER,
     tanggal_masuk: DataTypes.DATEONLY
   }, {

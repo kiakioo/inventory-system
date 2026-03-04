@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // Alamat server backend Anda
+  baseURL: 'http://192.168.100.91:5000/api',
 });
 
 // Otomatis tempelkan token JWT di setiap request jika sudah login

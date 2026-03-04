@@ -2,83 +2,115 @@ const { Barang, BarangMasuk, BarangKeluar, Cabang, sequelize } = require('../mod
 
 // --- TRANSAKSI BARANG MASUK ---
 exports.catatBarangMasuk = async (req, res) => {
-  const { barang_id, jumlah, tanggal_masuk, supplier, keterangan } = req.body;
-  
-  // Memulai transaksi database agar data aman jika terjadi error di tengah jalan
+  const { nama, merk, tipe, jml, tgl, satuan } = req.body;
   const t = await sequelize.transaction();
 
   try {
-    // 1. Cari data barang yang akan ditambah
-    const barang = await Barang.findByPk(barang_id, { transaction: t });
-    if (!barang) {
-      await t.rollback();
-      return res.status(404).json({ message: "Barang tidak ditemukan!" });
-    }
+    const namaBarang = nama || '';
+    const merkBarang = merk || '';
+    const tipeBarang = tipe || '';
 
-    // 2. Catat riwayat di tabel BarangMasuk
+    // PERBAIKAN: Gunakan 'nama' persis seperti di models/barang.js
+    let [barang] = await Barang.findOrCreate({
+      where: { 
+        nama: namaBarang, 
+        merk: merkBarang, 
+        tipe: tipeBarang 
+      },
+      defaults: { stok: 0, satuan: satuan || 'Buah', tglMasuk: tgl, diterima: 'Gudang Utama' },
+      transaction: t
+    });
+
     const transaksiMasuk = await BarangMasuk.create({
-      barang_id, jumlah, tanggal_masuk, supplier, keterangan
+      barang_id: barang.id,
+      nama: namaBarang, 
+      merk: merkBarang, 
+      tipe: tipeBarang, 
+      jumlah: parseInt(jml), 
+      tanggal_masuk: tgl, 
+      satuan: satuan || 'Buah'
     }, { transaction: t });
 
-    // 3. Tambahkan stok barang
-    barang.stok += parseInt(jumlah);
+    barang.stok += parseInt(jml);
     await barang.save({ transaction: t });
 
-    // 4. Jika semua sukses, simpan permanen (commit)
     await t.commit();
-    res.status(201).json({ message: "Barang masuk berhasil dicatat & stok bertambah!", data: transaksiMasuk });
+    res.status(201).json({ message: "Barang masuk berhasil dicatat!", data: transaksiMasuk });
 
   } catch (error) {
-    // Jika ada error di tengah jalan, batalkan semua perubahan (rollback)
     await t.rollback();
+    console.error("🔴 Error Tambah Barang:", error);
     res.status(500).json({ message: "Gagal mencatat barang masuk", error: error.message });
   }
 };
 
-// --- TRANSAKSI BARANG KELUAR (DISTRIBUSI KE CABANG) ---
+// --- TRANSAKSI BARANG KELUAR ---
 exports.catatBarangKeluar = async (req, res) => {
-  const { barang_id, cabang_id, jumlah, tanggal_keluar, penerima, keterangan } = req.body;
+  const { nama, merk, tipe, jumlahKeluar, tglKeluar, penerima, ulp, satuan } = req.body;
+  
+  // LOG PENTING: Untuk melihat apakah data masuk ke server
+  console.log("🟢 REQUEST BARANG KELUAR DITERIMA:", req.body);
+  
   const t = await sequelize.transaction();
 
   try {
-    // 1. Cari data barang
-    const barang = await Barang.findByPk(barang_id, { transaction: t });
+    const namaBarang = nama || '';
+    const merkBarang = merk || '';
+    const tipeBarang = tipe || '';
+
+    // PERBAIKAN: Gunakan 'nama' bukan 'nama_barang'
+    const barang = await Barang.findOne({ 
+      where: { 
+        nama: namaBarang, 
+        merk: merkBarang, 
+        tipe: tipeBarang 
+      },
+      transaction: t 
+    });
+
     if (!barang) {
+      console.log("🔴 BARANG TIDAK DITEMUKAN DI DATABASE!");
       await t.rollback();
-      return res.status(404).json({ message: "Barang tidak ditemukan!" });
+      return res.status(404).json({ message: "Barang tidak ditemukan! Pastikan Nama, Merk, dan Tipe sama persis." });
     }
 
-    // 2. VALIDASI STOK: Jangan biarkan barang keluar jika stok tidak cukup (minus)
-    if (barang.stok < parseInt(jumlah)) {
+    const qty = parseInt(jumlahKeluar);
+    if (barang.stok < qty) {
+      console.log("🔴 STOK KURANG!");
       await t.rollback();
-      return res.status(400).json({ 
-        message: `Stok tidak mencukupi! Sisa stok saat ini hanya ${barang.stok}` 
-      });
+      return res.status(400).json({ message: `Stok tidak mencukupi! Sisa stok hanya ${barang.stok}` });
     }
 
-    // 3. Catat riwayat di tabel BarangKeluar
+    // Catat riwayat Barang Keluar
     const transaksiKeluar = await BarangKeluar.create({
-      barang_id, cabang_id, jumlah, tanggal_keluar, penerima, keterangan
+      barang_id: barang.id,
+      nama: namaBarang, 
+      merk: merkBarang, 
+      tipe: tipeBarang, 
+      jumlahKeluar: qty, 
+      tglKeluar, 
+      penerima, 
+      ulp, 
+      satuan: satuan || 'Buah'
     }, { transaction: t });
 
-    // 4. Kurangi stok barang
-    barang.stok -= parseInt(jumlah);
+    barang.stok -= qty;
     await barang.save({ transaction: t });
 
-    // 5. Simpan permanen (commit)
     await t.commit();
-    res.status(201).json({ message: "Barang keluar berhasil dicatat & stok berkurang!", data: transaksiKeluar });
+    console.log("✅ PENGELUARAN SUKSES!");
+    res.status(201).json({ message: "Barang keluar berhasil dicatat!", data: transaksiKeluar });
 
   } catch (error) {
     await t.rollback();
+    console.error("🔴 SERVER ERROR:", error);
     res.status(500).json({ message: "Gagal mencatat barang keluar", error: error.message });
   }
 };
 
-// --- GET RIWAYAT TRANSAKSI (Untuk ditampilkan di tabel Frontend nanti) ---
 exports.getRiwayatMasuk = async (req, res) => {
   try {
-    const data = await BarangMasuk.findAll({ include: [{ model: Barang, as: 'barang' }] });
+    const data = await BarangMasuk.findAll({ order: [['createdAt', 'DESC']] });
     res.status(200).json({ data });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -87,17 +119,16 @@ exports.getRiwayatMasuk = async (req, res) => {
 
 exports.getRiwayatKeluar = async (req, res) => {
   try {
-    const data = await BarangKeluar.findAll({ 
-      include: [
-        { model: Barang, as: 'barang' },
-        { model: Cabang, as: 'cabang' }
-      ] 
-    });
+    const data = await BarangKeluar.findAll({ order: [['createdAt', 'DESC']] });
     res.status(200).json({ data });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-  module.exports = { 
-  getAllTransaksi: exports.getAllTransaksi 
 };
+
+module.exports = { 
+  catatBarangMasuk: exports.catatBarangMasuk,
+  catatBarangKeluar: exports.catatBarangKeluar,
+  getRiwayatMasuk: exports.getRiwayatMasuk,
+  getRiwayatKeluar: exports.getRiwayatKeluar
 };

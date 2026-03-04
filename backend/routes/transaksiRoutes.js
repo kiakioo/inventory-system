@@ -7,7 +7,9 @@ router.post('/masuk', transaksiController.catatBarangMasuk);
 router.post('/keluar', transaksiController.catatBarangKeluar);
 
 // Route untuk melihat riwayat (GET)
-router.get('/masuk', transaksiController.getRiwayatMasuk);
-router.get('/keluar', transaksiController.getRiwayatKeluar);
+router.post('/barang-masuk', transaksiController.catatBarangMasuk);
+router.post('/barang-keluar', transaksiController.catatBarangKeluar); 
+router.get('/riwayat-masuk', transaksiController.getRiwayatMasuk);
+router.get('/riwayat-keluar', transaksiController.getRiwayatKeluar);
 
 module.exports = router;
