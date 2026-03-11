@@ -18,7 +18,6 @@ exports.createBarang = async (req, res) => {
   }
 };
 
-// FITUR BARU: Update Stok Langsung (Hanya untuk Admin)
 exports.updateStok = async (req, res) => {
   try {
     const { id } = req.params;
@@ -36,8 +35,23 @@ exports.updateStok = async (req, res) => {
   }
 };
 
+// FITUR BARU: Hapus Master Data Barang
+exports.deleteBarang = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const barang = await Barang.findByPk(id);
+    if (!barang) return res.status(404).json({ message: "Data material tidak ditemukan!" });
+
+    await barang.destroy();
+    res.status(200).json({ message: "Master barang berhasil dihapus!" });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal menghapus barang", error: error.message });
+  }
+};
+
 module.exports = { 
   getAllBarang: exports.getAllBarang, 
   createBarang: exports.createBarang,
-  updateStok: exports.updateStok
+  updateStok: exports.updateStok,
+  deleteBarang: exports.deleteBarang // Export fungsi hapus
 };

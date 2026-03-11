@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path'); // Tambahan baru
 const db = require('./models');
 
 const app = express();
@@ -9,10 +10,15 @@ app.use(express.json());
 const authRoutes = require('./routes/authRoutes');
 const barangRoutes = require('./routes/barangRoutes'); 
 const transaksiRoutes = require('./routes/transaksiRoutes');
+const arsipRoutes = require('./routes/arsipRoutes'); // Tambahan rute arsip
+
+// Mengizinkan frontend membaca folder uploads berisi PDF
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/barang', barangRoutes); 
 app.use('/api/transaksi', transaksiRoutes);
+app.use('/api/arsip', arsipRoutes); // Gunakan rute arsip
 
 const PORT = process.env.PORT || 5000;
 
