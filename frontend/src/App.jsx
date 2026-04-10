@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Box, ArrowUpRight, ArrowDownLeft, 
   LogOut, Zap, Search, FileDown, 
   ChevronRight, CheckCircle2, ListFilter, Users, UserPlus, Menu, X, Edit, PlusCircle, ToggleLeft,
-  UploadCloud, FileText, Download, Trash2, Upload, Camera 
+  FileText, Download, Trash2, Upload, Camera 
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { jsPDF } from 'jspdf';
@@ -14,7 +14,6 @@ import api from './services/api';
 
 const backendURL = 'http://192.168.100.91:5000'; 
 
-// --- KOMPONEN NAVIGASI SIDEBAR ---
 const NavItem = ({ to, icon: Icon, label, onClick }) => {
   const location = useLocation();
   const isActive = location.pathname === to;
@@ -30,7 +29,6 @@ const NavItem = ({ to, icon: Icon, label, onClick }) => {
   );
 };
 
-// --- LAYOUT UTAMA ---
 const Layout = ({ children, title }) => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user')) || { name: "User", role: "Staff" };
@@ -68,7 +66,6 @@ const Layout = ({ children, title }) => {
           <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-8 mb-2">Utama</div>
           <NavItem to="/" icon={LayoutDashboard} label="Dashboard" onClick={() => setIsSidebarOpen(false)} />
           <NavItem to="/barang" icon={Box} label="History Report" onClick={() => setIsSidebarOpen(false)} />
-          <NavItem to="/arsip-dokumen" icon={UploadCloud} label="Upload Berkas" onClick={() => setIsSidebarOpen(false)} />
           
           <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-8 mt-6 mb-2">Transaksi</div>
           <NavItem to="/transaksi-masuk" icon={ArrowDownLeft} label="Barang Masuk" onClick={() => setIsSidebarOpen(false)} />
@@ -117,7 +114,6 @@ const Layout = ({ children, title }) => {
   );
 };
 
-// --- HALAMAN DASHBOARD ---
 const Dashboard = ({ materials, stats, onRefresh }) => {
   const user = JSON.parse(localStorage.getItem('user'));
   const isAdmin = user?.role === 'Admin';
@@ -151,7 +147,6 @@ const Dashboard = ({ materials, stats, onRefresh }) => {
     }
   };
 
-  // FITUR BARU: Handle Hapus Barang di Dashboard
   const handleDeleteStok = async (item) => {
     const result = await Swal.fire({
       title: 'Hapus Data Barang?',
@@ -228,11 +223,9 @@ const Dashboard = ({ materials, stats, onRefresh }) => {
                     <td className="px-6 py-5 text-right font-black text-[#00AFF0] text-base">{item.stok} <span className="text-xs font-semibold text-slate-400 ml-1">{item.satuan || 'unit'}</span></td>
                     {isAdmin && (
                       <td className="px-6 py-5 text-center flex justify-center items-center gap-2">
-                        {/* Tombol Edit */}
                         <button onClick={() => handleEditStok(item)} className="p-2 text-slate-400 hover:text-[#00AFF0] hover:bg-blue-50 rounded-xl transition-all" title="Koreksi Stok">
                           <Edit size={18} />
                         </button>
-                        {/* Tombol Hapus */}
                         <button onClick={() => handleDeleteStok(item)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Hapus Barang dari Master Data">
                           <Trash2 size={18} />
                         </button>
@@ -249,7 +242,6 @@ const Dashboard = ({ materials, stats, onRefresh }) => {
   );
 };
 
-// --- HALAMAN TRANSAKSI MASUK ---
 const TransaksiMasuk = ({ materials, onAdd }) => {
   const [isManualInput, setIsManualInput] = useState(false); 
   const [form, setForm] = useState({ nama: '', merk: '', tipe: '', tgl: '', jml: '', satuan: 'Buah' }); 
@@ -384,7 +376,6 @@ const TransaksiMasuk = ({ materials, onAdd }) => {
   );
 };
 
-// --- HALAMAN TRANSAKSI KELUAR ---
 const TransaksiKeluar = ({ materials, onRemove }) => {
   const [generalForm, setGeneralForm] = useState({ ulp: '', penerima: '', tgl: '' });
   const [items, setItems] = useState([{ nama: '', merk: '', tipe: '', jml: '', satuan: 'Buah' }]);
@@ -555,7 +546,6 @@ const TransaksiKeluar = ({ materials, onRemove }) => {
   );
 };
 
-// --- HALAMAN HISTORY REPORT ---
 const HistoryReport = ({ riwayat, arsip, onRefreshHistory, fetchArsip }) => {
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState("");
@@ -667,7 +657,7 @@ const HistoryReport = ({ riwayat, arsip, onRefreshHistory, fetchArsip }) => {
 
       doc.text("PIHAK PEMBERI", 170, signY, { align: "center" });
       doc.text("UP3 PAREPARE", 170, signY + 5, { align: "center" });
-      doc.text(user.name.toUpperCase(), 170, signY + 35, { align: "center" });
+      doc.text("SOBRI FADILLAH", 170, signY + 35, { align: "center" });
 
       doc.save(`${finalFileName}.pdf`);
 
@@ -748,8 +738,32 @@ const HistoryReport = ({ riwayat, arsip, onRefreshHistory, fetchArsip }) => {
     }
   };
 
+  const handleDeleteDokumen = async (idArsip) => {
+    const result = await Swal.fire({
+      title: 'Hapus Dokumen BAST?',
+      text: 'File fisik dokumen PDF ini akan terhapus secara permanen dari server.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#94a3b8',
+      confirmButtonText: 'Ya, Hapus!',
+      cancelButtonText: 'Batal'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await api.delete(`/arsip/${idArsip}`);
+        Swal.fire('Terhapus!', 'Dokumen BAST berhasil dihapus.', 'success');
+        fetchArsip(); 
+      } catch (error) {
+        Swal.fire('Gagal!', 'Terjadi kesalahan saat menghapus dokumen.', 'error');
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
+      
       <div className="flex flex-col lg:flex-row justify-between items-center gap-4 bg-white p-4 sm:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm">
         <div className="flex flex-col sm:flex-row flex-wrap items-center gap-4 w-full">
           <div className="relative w-full sm:w-[20rem]">
@@ -823,7 +837,6 @@ const HistoryReport = ({ riwayat, arsip, onRefreshHistory, fetchArsip }) => {
                         <div className="font-bold text-slate-800 text-sm">{item.nama}</div>
                         <div className="text-[10px] text-slate-400">{item.merk} {item.tipe ? `- ${item.tipe}` : ''}</div>
                         
-                        {/* FOTO FISIK BARANG DIPINDAHKAN KE SINI (Hanya muncul jika ada foto) */}
                         {isMasuk && item.foto && (
                           <a href={`${backendURL}/uploads/${item.foto}`} target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-[9px] text-blue-500 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded-md transition-all font-bold w-fit" title="Lihat Foto Fisik Barang">
                             <Camera size={10} /> Lihat Foto Barang
@@ -837,7 +850,6 @@ const HistoryReport = ({ riwayat, arsip, onRefreshHistory, fetchArsip }) => {
                         <span className="font-bold">{item.keterangan}</span>
                       </td>
                       
-                      {/* KOLOM KHUSUS ARSIP SCAN BAST PDF */}
                       <td className="px-4 py-4 text-center">
                         {arsipTerkait ? (
                           <a href={`${backendURL}/uploads/${arsipTerkait.path_file}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-600 border border-green-200 font-bold text-[10px] rounded-lg hover:bg-green-600 hover:text-white transition-all shadow-sm">
@@ -852,175 +864,21 @@ const HistoryReport = ({ riwayat, arsip, onRefreshHistory, fetchArsip }) => {
 
                       {isAdmin && (
                         <td className="px-4 py-4 text-center">
-                          <button onClick={(e) => { e.stopPropagation(); handleEditRow(item); }} className="p-1.5 text-slate-400 hover:text-[#00AFF0] hover:bg-blue-50 rounded-lg transition-all" title="Edit Laporan Transaksi">
-                            <Edit size={16} />
-                          </button>
+                          <div className="flex justify-center items-center gap-2">
+                            <button onClick={(e) => { e.stopPropagation(); handleEditRow(item); }} className="p-1.5 text-slate-400 hover:text-[#00AFF0] hover:bg-blue-50 rounded-lg transition-all" title="Edit Laporan Transaksi">
+                              <Edit size={16} />
+                            </button>
+                            {arsipTerkait && (
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteDokumen(arsipTerkait.id); }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Hapus Dokumen PDF BAST">
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       )}
                     </tr>
                   )
                 })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// --- HALAMAN ARSIP SCAN PDF ---
-const ArsipDokumen = () => {
-  const [file, setFile] = useState(null);
-  const [keterangan, setKeterangan] = useState('');
-  const [arsip, setArsip] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const user = JSON.parse(localStorage.getItem('user')) || { name: "Staff" };
-  const isAdmin = user?.role === 'Admin'; 
-
-  const backendURL = 'http://192.168.100.91:5000'; 
-
-  const fetchArsip = async () => {
-    try {
-      const res = await api.get('/arsip');
-      setArsip(Array.isArray(res.data?.data) ? res.data.data : []);
-    } catch (error) {
-      console.error("Gagal mengambil data arsip", error);
-      setArsip([]);
-    }
-  };
-
-  useEffect(() => { fetchArsip(); }, []);
-
-  const handleUpload = async (e) => {
-    e.preventDefault();
-    if (!file) {
-      return Swal.fire('Perhatian', 'Pilih file PDF terlebih dahulu!', 'warning');
-    }
-
-    const formData = new FormData();
-    formData.append('pdf_file', file);
-    formData.append('keterangan', keterangan);
-    formData.append('uploader', user.name);
-
-    setLoading(true);
-    try {
-      await api.post('/arsip/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      Swal.fire('Berhasil!', 'Dokumen BAST berhasil diarsipkan.', 'success');
-      setFile(null);
-      setKeterangan('');
-      document.getElementById('fileUpload').value = ""; 
-      fetchArsip();
-    } catch (error) {
-      Swal.fire('Gagal!', error.response?.data?.message || 'Gagal mengupload dokumen.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (id, namaFile) => {
-    const result = await Swal.fire({
-      title: 'Hapus Arsip?',
-      text: `Anda yakin ingin menghapus permanen dokumen "${namaFile}"? File fisik juga akan terhapus.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#94a3b8',
-      confirmButtonText: 'Ya, Hapus!',
-      cancelButtonText: 'Batal'
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await api.delete(`/arsip/${id}`);
-        Swal.fire('Terhapus!', 'Arsip dokumen berhasil dihapus.', 'success');
-        fetchArsip(); 
-      } catch (error) {
-        Swal.fire('Gagal!', 'Terjadi kesalahan saat menghapus arsip.', 'error');
-      }
-    }
-  };
-
-  return (
-    <div className="space-y-6 animate-in fade-in duration-700 h-full flex flex-col">
-      <div className="w-full bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-100 shrink-0">
-        <div className="flex items-center justify-between gap-3 mb-5 border-b border-slate-50 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 text-[#00AFF0] rounded-xl"><UploadCloud size={20} /></div>
-            <h3 className="text-lg md:text-xl font-black text-slate-800">Upload Dokumen BAST Terpisah</h3>
-          </div>
-        </div>
-        
-        <form onSubmit={handleUpload} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 mb-1 block">Pilih File Scan PDF</label>
-              <input 
-                type="file" id="fileUpload" accept="application/pdf" 
-                onChange={e => setFile(e.target.files[0])} 
-                className="w-full p-2 bg-[#F8FAFC] border-2 border-transparent rounded-xl outline-none focus:border-[#00AFF0] transition-all font-semibold text-slate-700 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-[#00AFF0] hover:file:bg-blue-100 cursor-pointer" 
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 mb-1 block">Keterangan / Judul Dokumen</label>
-              <input 
-                type="text" required value={keterangan} 
-                placeholder="..." 
-                onChange={e => setKeterangan(e.target.value)} 
-                className="w-full p-2.5 md:p-3 bg-[#F8FAFC] border-2 border-transparent rounded-xl outline-none focus:border-[#00AFF0] transition-all font-semibold text-slate-700 text-sm" 
-              />
-            </div>
-          </div>
-          <button disabled={loading} className="w-full py-3 md:py-4 bg-[#00AFF0] text-white rounded-xl font-black text-sm md:text-base shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 active:scale-95 transition-all mt-2">
-            {loading ? 'Mengunggah Arsip...' : 'Simpan Arsip Dokumen PDF'}
-          </button>
-        </form>
-      </div>
-
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col">
-        <div className="p-6 md:p-8 flex items-center justify-between gap-3 border-b border-slate-50 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-50 text-green-500 rounded-xl"><FileText size={20} /></div>
-            <h3 className="font-black text-base md:text-lg text-slate-800 tracking-tight">Semua Riwayat Dokumen</h3>
-          </div>
-        </div>
-        <div className="overflow-x-auto w-full flex-1">
-          <table className="w-full text-sm min-w-[700px]">
-            <thead className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-widest sticky top-0 z-10">
-              <tr>
-                <th className="px-6 py-4 text-left w-16">No</th>
-                <th className="px-6 py-4 text-left">Waktu Upload</th>
-                <th className="px-6 py-4 text-left">Keterangan / Tag ID</th>
-                <th className="px-6 py-4 text-left">Uploader</th>
-                <th className="px-6 py-4 text-center">Aksi File</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {!arsip || arsip.length === 0 ? (
-                <tr><td colSpan="5" className="text-center py-8 text-slate-400 font-medium">Belum ada dokumen yang diarsipkan.</td></tr>
-              ) : (
-                arsip.map((item, idx) => (
-                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors font-medium">
-                    <td className="px-6 py-5 text-slate-500">{idx + 1}</td>
-                    <td className="px-6 py-5 text-slate-800 font-bold">
-                      {new Date(item.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' })}
-                    </td>
-                    <td className="px-6 py-5 text-slate-700">{item.keterangan}</td>
-                    <td className="px-6 py-5 text-slate-500">{item.uploader}</td>
-                    <td className="px-6 py-5 text-center flex justify-center items-center gap-2">
-                      <a href={`${backendURL}/uploads/${item.path_file}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-[#00AFF0] font-bold text-xs rounded-lg hover:bg-[#00AFF0] hover:text-white transition-all shadow-sm">
-                        <Download size={14} /> Buka
-                      </a>
-                      {isAdmin && (
-                        <button onClick={() => handleDelete(item.id, item.keterangan)} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm" title="Hapus Permanen">
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
               )}
             </tbody>
           </table>
@@ -1180,7 +1038,7 @@ function App() {
       await api.post('/transaksi/barang-masuk', data, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      Swal.fire('Berhasil!', 'Transaksi masuk dicatat ke MySQL.', 'success');
+      Swal.fire('Berhasil!', 'Transaksi berhasil disimpan.', 'success');
       refreshAllData();
     } catch (error) { 
       Swal.fire('Gagal!', error.response?.data?.message || "Gagal menyimpan.", 'error');
@@ -1221,7 +1079,6 @@ function App() {
         
         <Route path="/barang" element={token ? <Layout title="Laporan History Transaksi"><HistoryReport riwayat={riwayatTransaksi} arsip={arsip} fetchArsip={fetchArsip} onRefreshHistory={refreshAllData} /></Layout> : <Navigate to="/login" />} />
         
-        <Route path="/arsip-dokumen" element={token ? <Layout title="Arsip Scan PDF"><ArsipDokumen /></Layout> : <Navigate to="/login" />} />
         <Route path="/transaksi-masuk" element={token ? <Layout title="Penerimaan Stok"><TransaksiMasuk materials={materials} onAdd={addStock} /></Layout> : <Navigate to="/login" />} />
         <Route path="/transaksi-keluar" element={token ? <Layout title="Pengeluaran Stok"><TransaksiKeluar materials={materials} onRemove={removeStock} /></Layout> : <Navigate to="/login" />} />
         
